@@ -12,8 +12,8 @@ app.get("/questions", (_: Request, res: Response) =>
     status: 200,
     message: "ok",
     data: qnaList.map((data) => {
-      delete data.answer;
-      return data;
+      const { answer, ...questionData } = data;
+      return questionData;
     }),
   })
 );
