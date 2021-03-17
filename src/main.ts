@@ -1,12 +1,16 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
 import * as path from "path";
 
-function createWindow() {
+let mWindow: BrowserWindow;
+let answerWindowInstance: BrowserWindow;
+
+function createWindow(): BrowserWindow {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     height: 600,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
+      nativeWindowOpen: true,
     },
     width: 800,
   });
@@ -16,18 +20,61 @@ function createWindow() {
 
   // Open the DevTools.
   mainWindow.webContents.openDevTools();
+
+  return mainWindow;
 }
+
+function createAnsWindow(): BrowserWindow {
+  const answerWindow = new BrowserWindow({
+    height: 600,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      nativeWindowOpen: true,
+    },
+    // parent: mWindow,
+    width: 800,
+  });
+
+  answerWindow.loadFile(path.join(__dirname, "../src/windows/ans/index.html"));
+
+  answerWindow.webContents.openDevTools();
+
+  return answerWindow;
+}
+
+// Select question
+ipcMain.on(
+  "question:select",
+  (event: Electron.IpcMainEvent, questionId: number) => {
+    if (!answerWindowInstance) {
+      answerWindowInstance = createAnsWindow();
+      answerWindowInstance.on("closed", () => {
+        answerWindowInstance = null;
+      });
+    }
+
+    if (questionId && typeof questionId === "number") {
+      // for 1st opening
+      answerWindowInstance.once("ready-to-show", () => {
+        answerWindowInstance.webContents.send("question:selected", questionId);
+      });
+
+      // just update content
+      answerWindowInstance.webContents.send("question:selected", questionId);
+    }
+  }
+);
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on("ready", () => {
-  createWindow();
+  mWindow = createWindow();
 
   app.on("activate", function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) mWindow = createWindow();
   });
 });
 
