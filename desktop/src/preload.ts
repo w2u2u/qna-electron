@@ -7,6 +7,7 @@ declare global {
       onQuestionSelected: (func: (questionId: number) => any) => void;
       selectQuestion: (questionId: number) => void;
       onQuestionsLoaded: (func: (questions: Question[]) => any) => void;
+      onAnswerLoaded: (func: (answer: string) => any) => void;
     };
   }
 
@@ -28,6 +29,11 @@ contextBridge.exposeInMainWorld("ipc", {
   onQuestionsLoaded: (func: (questions: Question[]) => any) => {
     ipcRenderer.on("question:list", (event, questions) => {
       func(questions);
+    });
+  },
+  onAnswerLoaded: (func: (answer: string) => any) => {
+    ipcRenderer.on("answer:loaded", (event, answer) => {
+      func(answer);
     });
   },
 });

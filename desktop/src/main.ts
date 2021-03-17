@@ -56,14 +56,51 @@ ipcMain.on(
     if (questionId && typeof questionId === "number") {
       // for 1st opening
       answerWindowInstance.once("ready-to-show", () => {
-        answerWindowInstance.webContents.send("question:selected", questionId);
+        getAnswerByQuestionId(questionId);
       });
 
       // just update content
-      answerWindowInstance.webContents.send("question:selected", questionId);
+      getAnswerByQuestionId(questionId);
     }
   }
 );
+
+// Get questions to main window
+function getQuestions() {
+  const req = net.request("http://localhost:3001/questions");
+
+  req
+    .on("response", (res: IncomingMessage) => {
+      res.on("data", (chunk) => {
+        mWindow.webContents.send("question:list", JSON.parse(`${chunk}`).data);
+      });
+      res.on("end", () => {
+        console.log("No more data in response.");
+      });
+    })
+    .end();
+}
+
+// Get answer to answer window
+function getAnswerByQuestionId(questionId: number) {
+  const req = net.request(
+    `http://localhost:3001/questions/${questionId}/answer`
+  );
+
+  req
+    .on("response", (res: IncomingMessage) => {
+      res.on("data", (chunk) => {
+        answerWindowInstance.webContents.send(
+          "answer:loaded",
+          JSON.parse(`${chunk}`).data?.answer
+        );
+      });
+      res.on("end", () => {
+        console.log("No more data in response.");
+      });
+    })
+    .end();
+}
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
@@ -77,25 +114,7 @@ app.on("ready", () => {
     if (BrowserWindow.getAllWindows().length === 0) mWindow = createWindow();
   });
 
-  mWindow.once("ready-to-show", () => {
-    const req = net.request("http://localhost:3001/questions");
-
-    req
-      .on("response", (res: IncomingMessage) => {
-        console.log(`STATUS: ${res.statusCode}`);
-        console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
-        res.on("data", (chunk) => {
-          mWindow.webContents.send(
-            "question:list",
-            JSON.parse(`${chunk}`).data
-          );
-        });
-        res.on("end", () => {
-          console.log("No more data in response.");
-        });
-      })
-      .end();
-  });
+  mWindow.once("ready-to-show", () => getQuestions());
 });
 
 // Quit when all windows are closed, except on macOS. There, it's common
