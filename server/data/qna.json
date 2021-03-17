@@ -1,0 +1,22 @@
+[
+  {
+    "questionId": 1,
+    "question": "What ... ?",
+    "answer": "Asking for information about something"
+  },
+  {
+    "questionId": 2,
+    "question": "Where ... ?",
+    "answer": "Asking in or at what place or position"
+  },
+  {
+    "questionId": 3,
+    "question": "When ... ?",
+    "answer": "Asking about time"
+  },
+  {
+    "questionId": 4,
+    "question": "Why ... ?",
+    "answer": "Asking for reason, asking what...for"
+  }
+]
