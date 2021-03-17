@@ -6,7 +6,13 @@ declare global {
     ipc: {
       onQuestionSelected: (func: (questionId: number) => any) => void;
       selectQuestion: (questionId: number) => void;
+      onQuestionsLoaded: (func: (questions: Question[]) => any) => void;
     };
+  }
+
+  interface Question {
+    questionId: number;
+    question: string;
   }
 }
 
@@ -18,5 +24,10 @@ contextBridge.exposeInMainWorld("ipc", {
   },
   selectQuestion: (questionId: number) => {
     ipcRenderer.send("question:select", questionId);
+  },
+  onQuestionsLoaded: (func: (questions: Question[]) => any) => {
+    ipcRenderer.on("question:list", (event, questions) => {
+      func(questions);
+    });
   },
 });

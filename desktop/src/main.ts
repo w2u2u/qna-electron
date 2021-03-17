@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, net, IncomingMessage } from "electron";
 import * as path from "path";
 
 let mWindow: BrowserWindow;
@@ -75,6 +75,26 @@ app.on("ready", () => {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) mWindow = createWindow();
+  });
+
+  mWindow.once("ready-to-show", () => {
+    const req = net.request("http://localhost:3001/questions");
+
+    req
+      .on("response", (res: IncomingMessage) => {
+        console.log(`STATUS: ${res.statusCode}`);
+        console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
+        res.on("data", (chunk) => {
+          mWindow.webContents.send(
+            "question:list",
+            JSON.parse(`${chunk}`).data
+          );
+        });
+        res.on("end", () => {
+          console.log("No more data in response.");
+        });
+      })
+      .end();
   });
 });
 
