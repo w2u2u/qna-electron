@@ -18,6 +18,23 @@ app.get("/questions", (_: Request, res: Response) =>
   })
 );
 
+app.get("/questions/:questionId", (req: Request, res: Response) => {
+  const { questionId } = req.params;
+  const qid = Number(questionId);
+  if (qid || !Number.isNaN(qid)) {
+    res.json({
+      status: 200,
+      message: "ok",
+      data: qnaList.find((data) => data.questionId === qid),
+    });
+  } else {
+    res.status(400).json({
+      status: 400,
+      message: "Question id is invalid.",
+    });
+  }
+});
+
 app.get("/questions/:questionId/answer", (req: Request, res: Response) => {
   const { questionId } = req.params;
   const qid = Number(questionId);
