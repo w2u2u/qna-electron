@@ -1,4 +1,11 @@
-import { app, BrowserWindow, ipcMain, net, IncomingMessage } from "electron";
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  net,
+  IncomingMessage,
+  globalShortcut,
+} from "electron";
 import * as path from "path";
 
 let mainWindowInstance: BrowserWindow;
@@ -18,6 +25,8 @@ function createWindow(): BrowserWindow {
   // and load the index.html of the app.
   mainWindow.loadFile(path.join(__dirname, "../index.html"));
 
+  preventWindowRefresh(mainWindow);
+
   return mainWindow;
 }
 
@@ -33,7 +42,23 @@ function createAnsWindow(): BrowserWindow {
 
   answerWindow.loadFile(path.join(__dirname, "../src/windows/ans/index.html"));
 
+  preventWindowRefresh(answerWindow);
+
   return answerWindow;
+}
+
+// Prevent window refresh
+function preventWindowRefresh(win: BrowserWindow) {
+  win.on("focus", () => {
+    globalShortcut.registerAll(
+      ["CommandOrControl+R", "CommandOrControl+Shift+R", "F5"],
+      () => {}
+    );
+  });
+
+  win.on("blur", () => {
+    globalShortcut.unregisterAll();
+  });
 }
 
 // Select question
