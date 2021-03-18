@@ -7,6 +7,7 @@ import {
   globalShortcut,
 } from "electron";
 import * as path from "path";
+import config from "./config";
 
 let mainWindowInstance: BrowserWindow;
 let answerWindowInstance: BrowserWindow;
@@ -85,7 +86,7 @@ ipcMain.on(
 
 // Get questions to main window
 function getQuestions() {
-  const req = net.request("http://localhost:3001/questions");
+  const req = net.request(`http://${config.QuestionApiService}`);
 
   req
     .on("response", (res: IncomingMessage) => {
@@ -107,7 +108,7 @@ function getQuestions() {
 // Get answer to answer window
 function getAnswerByQuestionId(questionId: number) {
   const req = net.request(
-    `http://localhost:3001/questions/${questionId}/answer`
+    `http://${config.QuestionApiService}/${questionId}/answer`
   );
 
   req
