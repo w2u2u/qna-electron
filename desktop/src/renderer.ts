@@ -6,7 +6,8 @@
 // needed in the renderer process.
 const app = document.getElementById("app");
 const list = document.createElement("ul");
-app.appendChild(list);
+
+app?.appendChild(list);
 
 window.ipc.onQuestionsLoaded((questions) =>
   questions.forEach(({ questionId, question }) => {

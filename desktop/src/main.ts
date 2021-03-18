@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain, net, IncomingMessage } from "electron";
 import * as path from "path";
 
-let mWindow: BrowserWindow;
+let mainWindowInstance: BrowserWindow;
 let answerWindowInstance: BrowserWindow;
 
 function createWindow(): BrowserWindow {
@@ -18,9 +18,6 @@ function createWindow(): BrowserWindow {
   // and load the index.html of the app.
   mainWindow.loadFile(path.join(__dirname, "../index.html"));
 
-  // Open the DevTools.
-  mainWindow.webContents.openDevTools();
-
   return mainWindow;
 }
 
@@ -31,13 +28,10 @@ function createAnsWindow(): BrowserWindow {
       preload: path.join(__dirname, "preload.js"),
       nativeWindowOpen: true,
     },
-    // parent: mWindow,
     width: 800,
   });
 
   answerWindow.loadFile(path.join(__dirname, "../src/windows/ans/index.html"));
-
-  answerWindow.webContents.openDevTools();
 
   return answerWindow;
 }
@@ -46,11 +40,8 @@ function createAnsWindow(): BrowserWindow {
 ipcMain.on(
   "question:select",
   (event: Electron.IpcMainEvent, questionId: number) => {
-    if (!answerWindowInstance) {
+    if (!answerWindowInstance || answerWindowInstance.isDestroyed()) {
       answerWindowInstance = createAnsWindow();
-      answerWindowInstance.on("closed", () => {
-        answerWindowInstance = null;
-      });
     }
 
     if (questionId && typeof questionId === "number") {
@@ -72,11 +63,12 @@ function getQuestions() {
   req
     .on("response", (res: IncomingMessage) => {
       res.on("data", (chunk) => {
-        mWindow.webContents.send("question:list", JSON.parse(`${chunk}`).data);
+        mainWindowInstance.webContents.send(
+          "question:list",
+          JSON.parse(`${chunk}`).data
+        );
       });
-      res.on("end", () => {
-        console.log("No more data in response.");
-      });
+      res.on("end", () => {});
     })
     .end();
 }
@@ -95,9 +87,7 @@ function getAnswerByQuestionId(questionId: number) {
           JSON.parse(`${chunk}`).data?.answer
         );
       });
-      res.on("end", () => {
-        console.log("No more data in response.");
-      });
+      res.on("end", () => {});
     })
     .end();
 }
@@ -106,15 +96,16 @@ function getAnswerByQuestionId(questionId: number) {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on("ready", () => {
-  mWindow = createWindow();
+  mainWindowInstance = createWindow();
 
   app.on("activate", function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) mWindow = createWindow();
+    if (BrowserWindow.getAllWindows().length === 0)
+      mainWindowInstance = createWindow();
   });
 
-  mWindow.once("ready-to-show", () => getQuestions());
+  mainWindowInstance.once("ready-to-show", () => getQuestions());
 });
 
 // Quit when all windows are closed, except on macOS. There, it's common
