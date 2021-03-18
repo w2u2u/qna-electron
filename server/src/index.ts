@@ -1,5 +1,7 @@
+import http from "http";
 import express, { Express, Request, Response } from "express";
 import { QnA } from "./interfaces/qna";
+import { ServeError } from "./interfaces/serverError";
 
 const app: Express = express();
 const PORT: string = process.env.PORT || "3001";
@@ -54,4 +56,16 @@ app.get("/questions/:questionId/answer", (req: Request, res: Response) => {
   }
 });
 
-app.listen(PORT, () => console.log(`Server running on PORT ${PORT}`));
+const server = http.createServer(app);
+
+server.on("error", (err: ServeError) => {
+  switch (err.code) {
+    case "EADDRINUSE":
+      console.error(`Port (:${PORT}) is already in use`);
+      break;
+    default:
+      console.error(err);
+  }
+});
+
+server.listen(PORT, () => console.log(`Server running on PORT ${PORT}`));
