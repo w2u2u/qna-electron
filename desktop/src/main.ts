@@ -67,6 +67,8 @@ ipcMain.on(
   (event: Electron.IpcMainEvent, questionId: number) => {
     if (!answerWindowInstance || answerWindowInstance.isDestroyed()) {
       answerWindowInstance = createAnsWindow();
+
+      setTimeout(() => answerWindowInstance.close(), 5000);
     }
 
     if (questionId && typeof questionId === "number") {
