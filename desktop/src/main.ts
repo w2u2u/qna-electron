@@ -87,14 +87,18 @@ function getQuestions() {
 
   req
     .on("response", (res: IncomingMessage) => {
-      res.on("data", (chunk) => {
-        mainWindowInstance.webContents.send(
-          "question:list",
-          JSON.parse(`${chunk}`).data
-        );
-      });
-      res.on("end", () => {});
+      res
+        .on("data", (chunk: Buffer) => {
+          mainWindowInstance.webContents.send(
+            "question:list",
+            JSON.parse(`${chunk}`).data
+          );
+        })
+        .on("end", () => {});
     })
+    .on("error", (err: Error) =>
+      console.error("Server not response with: ", err)
+    )
     .end();
 }
 
@@ -106,14 +110,18 @@ function getAnswerByQuestionId(questionId: number) {
 
   req
     .on("response", (res: IncomingMessage) => {
-      res.on("data", (chunk) => {
-        answerWindowInstance.webContents.send(
-          "answer:loaded",
-          JSON.parse(`${chunk}`).data?.answer
-        );
-      });
-      res.on("end", () => {});
+      res
+        .on("data", (chunk: Buffer) => {
+          answerWindowInstance.webContents.send(
+            "answer:loaded",
+            JSON.parse(`${chunk}`).data?.answer
+          );
+        })
+        .on("end", () => {});
     })
+    .on("error", (err: Error) =>
+      console.error("Server not response with: ", err)
+    )
     .end();
 }
 
