@@ -3,8 +3,12 @@ export interface Question {
   question: string;
 }
 
+export interface QuestionsResponseData {
+  questions: Question[] | null;
+}
+
 export interface GetQuestionsAPIResponse {
   status: number;
   message: string;
-  data: Question[] | null;
+  data: QuestionsResponseData | null;
 }

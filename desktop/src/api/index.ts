@@ -18,8 +18,8 @@ export function getQuestions(config: Config): Promise<Question[]> {
             const questionsResponse: GetQuestionsAPIResponse = JSON.parse(
               `${chunk}`
             );
-            if (questionsResponse.data) {
-              resolve(questionsResponse.data);
+            if (questionsResponse.data && questionsResponse.data.questions) {
+              resolve(questionsResponse.data.questions);
             } else {
               reject(new Error("Questions response is invalid structure"));
             }
