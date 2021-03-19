@@ -4,8 +4,8 @@ import { config } from "./config";
 import { Question } from "./types";
 import { getQuestions, getAnswerByQuestionId } from "./api";
 
-let mainWindowInstance: BrowserWindow;
-let answerWindowInstance: BrowserWindow;
+let mainWindowInstance: BrowserWindow | null;
+let answerWindowInstance: BrowserWindow | null;
 
 function newMainWindow(): BrowserWindow {
   // Create the browser window.
@@ -58,18 +58,28 @@ function preventedRefresh(win: BrowserWindow): BrowserWindow {
 // IPC: (question:select) Update selected question id
 ipcMain.on(
   "question:select",
-  async (event: Electron.IpcMainEvent, questionId: number) => {
-    if (!answerWindowInstance || answerWindowInstance.isDestroyed()) {
+  async (_: Electron.IpcMainEvent, questionId: number) => {
+    if (!answerWindowInstance) {
       answerWindowInstance = preventedRefresh(newAnsWindow());
 
-      setTimeout(() => answerWindowInstance.close(), 5000);
+      const answerWindowTimeout = setTimeout(
+        () => answerWindowInstance?.close(),
+        5000
+      );
+
+      answerWindowInstance.on("close", () => {
+        answerWindowInstance = null;
+        clearTimeout(answerWindowTimeout);
+      });
     }
 
     if (questionId && typeof questionId === "number") {
       // for 1st opening
       answerWindowInstance.once("ready-to-show", async () => {
         const answer = await getAnswerByQuestionId(questionId, config);
-        ipcAnswerLoaded(answerWindowInstance, answer);
+        if (answerWindowInstance) {
+          ipcAnswerLoaded(answerWindowInstance, answer);
+        }
       });
 
       // just update content
@@ -105,7 +115,9 @@ app.on("ready", () => {
 
   mainWindowInstance.once("ready-to-show", async () => {
     const questions = await getQuestions(config);
-    ipcQuestionList(mainWindowInstance, questions);
+    if (mainWindowInstance) {
+      ipcQuestionList(mainWindowInstance, questions);
+    }
   });
 });
 
