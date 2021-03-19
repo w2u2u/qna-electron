@@ -1,18 +1,13 @@
-import {
-  app,
-  BrowserWindow,
-  ipcMain,
-  net,
-  IncomingMessage,
-  globalShortcut,
-} from "electron";
+import { app, BrowserWindow, ipcMain, globalShortcut } from "electron";
 import * as path from "path";
-import config from "./config";
+import { config } from "./config";
+import { Question } from "./types";
+import { getQuestions, getAnswerByQuestionId } from "./api";
 
 let mainWindowInstance: BrowserWindow;
 let answerWindowInstance: BrowserWindow;
 
-function createWindow(): BrowserWindow {
+function newMainWindow(): BrowserWindow {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     height: 600,
@@ -26,12 +21,10 @@ function createWindow(): BrowserWindow {
   // and load the index.html of the app.
   mainWindow.loadFile(path.join(__dirname, "../index.html"));
 
-  preventWindowRefresh(mainWindow);
-
   return mainWindow;
 }
 
-function createAnsWindow(): BrowserWindow {
+function newAnsWindow(): BrowserWindow {
   const answerWindow = new BrowserWindow({
     height: 600,
     webPreferences: {
@@ -43,13 +36,11 @@ function createAnsWindow(): BrowserWindow {
 
   answerWindow.loadFile(path.join(__dirname, "../src/windows/ans/index.html"));
 
-  preventWindowRefresh(answerWindow);
-
   return answerWindow;
 }
 
 // Prevent window refresh
-function preventWindowRefresh(win: BrowserWindow) {
+function preventedRefresh(win: BrowserWindow): BrowserWindow {
   win.on("focus", () => {
     globalShortcut.registerAll(
       ["CommandOrControl+R", "CommandOrControl+Shift+R", "F5"],
@@ -60,88 +51,62 @@ function preventWindowRefresh(win: BrowserWindow) {
   win.on("blur", () => {
     globalShortcut.unregisterAll();
   });
+
+  return win;
 }
 
-// Select question
+// IPC: (question:select) Update selected question id
 ipcMain.on(
   "question:select",
-  (event: Electron.IpcMainEvent, questionId: number) => {
+  async (event: Electron.IpcMainEvent, questionId: number) => {
     if (!answerWindowInstance || answerWindowInstance.isDestroyed()) {
-      answerWindowInstance = createAnsWindow();
+      answerWindowInstance = preventedRefresh(newAnsWindow());
 
       setTimeout(() => answerWindowInstance.close(), 5000);
     }
 
     if (questionId && typeof questionId === "number") {
       // for 1st opening
-      answerWindowInstance.once("ready-to-show", () => {
-        getAnswerByQuestionId(questionId);
+      answerWindowInstance.once("ready-to-show", async () => {
+        const answer = await getAnswerByQuestionId(questionId, config);
+        ipcAnswerLoaded(answerWindowInstance, answer);
       });
 
       // just update content
-      getAnswerByQuestionId(questionId);
+      const answer = await getAnswerByQuestionId(questionId, config);
+      ipcAnswerLoaded(answerWindowInstance, answer);
     }
   }
 );
 
-// Get questions to main window
-function getQuestions() {
-  const req = net.request(`http://${config.QuestionApiService}`);
-
-  req
-    .on("response", (res: IncomingMessage) => {
-      res
-        .on("data", (chunk: Buffer) => {
-          mainWindowInstance.webContents.send(
-            "question:list",
-            JSON.parse(`${chunk}`).data
-          );
-        })
-        .on("end", () => {});
-    })
-    .on("error", (err: Error) =>
-      console.error("Server not response with: ", err)
-    )
-    .end();
+// IPC: (answer:loaded) Update loaded answer data
+function ipcAnswerLoaded(win: BrowserWindow, answer: string) {
+  win.webContents.send("answer:loaded", answer);
 }
 
-// Get answer to answer window
-function getAnswerByQuestionId(questionId: number) {
-  const req = net.request(
-    `http://${config.QuestionApiService}/${questionId}/answer`
-  );
-
-  req
-    .on("response", (res: IncomingMessage) => {
-      res
-        .on("data", (chunk: Buffer) => {
-          answerWindowInstance.webContents.send(
-            "answer:loaded",
-            JSON.parse(`${chunk}`).data?.answer
-          );
-        })
-        .on("end", () => {});
-    })
-    .on("error", (err: Error) =>
-      console.error("Server not response with: ", err)
-    )
-    .end();
+// IPC: (question:list) Update list of question data
+function ipcQuestionList(win: BrowserWindow, questions: Question[]) {
+  win.webContents.send("question:list", questions);
 }
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on("ready", () => {
-  mainWindowInstance = createWindow();
+  mainWindowInstance = preventedRefresh(newMainWindow());
 
   app.on("activate", function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0)
-      mainWindowInstance = createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) {
+      mainWindowInstance = preventedRefresh(newMainWindow());
+    }
   });
 
-  mainWindowInstance.once("ready-to-show", () => getQuestions());
+  mainWindowInstance.once("ready-to-show", async () => {
+    const questions = await getQuestions(config);
+    ipcQuestionList(mainWindowInstance, questions);
+  });
 });
 
 // Quit when all windows are closed, except on macOS. There, it's common

@@ -1,6 +1,8 @@
 // All of the Node.js APIs are available in the preload process.
 // It has the same sandbox as a Chrome extension.
 import { contextBridge, ipcRenderer } from "electron";
+import { Question } from "./types/question";
+
 declare global {
   interface Window {
     ipc: {
@@ -9,11 +11,6 @@ declare global {
       onQuestionsLoaded: (func: (questions: Question[]) => any) => void;
       onAnswerLoaded: (func: (answer: string) => any) => void;
     };
-  }
-
-  interface Question {
-    questionId: number;
-    question: string;
   }
 }
 

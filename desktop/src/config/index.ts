@@ -1,9 +1,5 @@
-interface Config {
-  QuestionApiService: string;
-}
+import { Config } from "../types";
 
-const config: Config = {
+export const config: Config = {
   QuestionApiService: "localhost:3001/questions",
 };
-
-export default config;
