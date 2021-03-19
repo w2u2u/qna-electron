@@ -6,31 +6,37 @@ import { Question } from "./types/question";
 declare global {
   interface Window {
     ipc: {
-      onQuestionSelected: (func: (questionId: number) => any) => void;
       selectQuestion: (questionId: number) => void;
-      onQuestionsLoaded: (func: (questions: Question[]) => any) => void;
-      onAnswerLoaded: (func: (answer: string) => any) => void;
+      onQuestionSelected: (func: (questionId: number) => void) => void;
+      onQuestionsLoaded: (func: (questions: Question[]) => void) => void;
+      onAnswerLoaded: (func: (answer: string) => void) => void;
+      onErrorAPI: (func: (err: Error) => void) => void;
     };
   }
 }
 
 contextBridge.exposeInMainWorld("ipc", {
-  onQuestionSelected: (func: (questionId: number) => any) => {
+  selectQuestion: (questionId: number) => {
+    ipcRenderer.send("question:select", questionId);
+  },
+  onQuestionSelected: (func: (questionId: number) => void) => {
     ipcRenderer.on("question:selected", (event, questionId) => {
       func(questionId);
     });
   },
-  selectQuestion: (questionId: number) => {
-    ipcRenderer.send("question:select", questionId);
-  },
-  onQuestionsLoaded: (func: (questions: Question[]) => any) => {
+  onQuestionsLoaded: (func: (questions: Question[]) => void) => {
     ipcRenderer.on("question:list", (event, questions) => {
       func(questions);
     });
   },
-  onAnswerLoaded: (func: (answer: string) => any) => {
+  onAnswerLoaded: (func: (answer: string) => void) => {
     ipcRenderer.on("answer:loaded", (event, answer) => {
       func(answer);
+    });
+  },
+  onErrorAPI: (func: (err: Error) => void) => {
+    ipcRenderer.on("error:api", (event, err: Error) => {
+      func(err);
     });
   },
 });

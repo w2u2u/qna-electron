@@ -6,10 +6,14 @@
 // needed in the renderer process.
 const app = document.getElementById("app");
 const list = document.createElement("ul");
+const errorText = document.createElement("div");
 
+app?.appendChild(errorText);
 app?.appendChild(list);
 
-window.ipc.onQuestionsLoaded((questions) =>
+window.ipc.onQuestionsLoaded((questions) => {
+  errorText.innerHTML = "";
+
   questions.forEach(({ questionId, question }) => {
     const btnShowAns = document.createElement("button");
     btnShowAns.innerHTML = `Question: ${question}`;
@@ -20,5 +24,9 @@ window.ipc.onQuestionsLoaded((questions) =>
     const questionEl = document.createElement("li");
     questionEl.appendChild(btnShowAns);
     list.appendChild(questionEl);
-  })
-);
+  });
+});
+
+window.ipc.onErrorAPI((err: Error) => {
+  errorText.innerHTML = "Failed to load questions";
+});

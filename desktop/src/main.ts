@@ -59,7 +59,14 @@ function preventedRefresh(win: BrowserWindow): BrowserWindow {
 ipcMain.on(
   "question:select",
   async (_: Electron.IpcMainEvent, questionId: number) => {
-    if (!answerWindowInstance) {
+    if (answerWindowInstance) {
+      try {
+        const answer = await getAnswerByQuestionId(questionId, config);
+        ipcAnswerLoaded(answerWindowInstance, answer);
+      } catch (err) {
+        ipcErrorAPI(answerWindowInstance, err);
+      }
+    } else {
       answerWindowInstance = preventedRefresh(newAnsWindow());
 
       const answerWindowTimeout = setTimeout(
@@ -67,36 +74,40 @@ ipcMain.on(
         5000
       );
 
+      // When close answer window clear instance and timeout
       answerWindowInstance.on("close", () => {
         answerWindowInstance = null;
         clearTimeout(answerWindowTimeout);
       });
-    }
 
-    if (questionId && typeof questionId === "number") {
-      // for 1st opening
+      // When ready to show fetch data to display
       answerWindowInstance.once("ready-to-show", async () => {
-        const answer = await getAnswerByQuestionId(questionId, config);
         if (answerWindowInstance) {
-          ipcAnswerLoaded(answerWindowInstance, answer);
+          try {
+            const answer = await getAnswerByQuestionId(questionId, config);
+            ipcAnswerLoaded(answerWindowInstance, answer);
+          } catch (err) {
+            ipcErrorAPI(answerWindowInstance, err);
+          }
         }
       });
-
-      // just update content
-      const answer = await getAnswerByQuestionId(questionId, config);
-      ipcAnswerLoaded(answerWindowInstance, answer);
     }
   }
 );
 
 // IPC: (answer:loaded) Update loaded answer data
 function ipcAnswerLoaded(win: BrowserWindow, answer: string) {
-  win.webContents.send("answer:loaded", answer);
+  win?.webContents.send("answer:loaded", answer);
 }
 
 // IPC: (question:list) Update list of question data
 function ipcQuestionList(win: BrowserWindow, questions: Question[]) {
-  win.webContents.send("question:list", questions);
+  win?.webContents.send("question:list", questions);
+}
+
+// IPC: (error:api) Inform when api got any errors
+function ipcErrorAPI(win: BrowserWindow, err: Error) {
+  win?.webContents.send("error:api", err);
 }
 
 // This method will be called when Electron has finished
@@ -105,7 +116,7 @@ function ipcQuestionList(win: BrowserWindow, questions: Question[]) {
 app.on("ready", () => {
   mainWindowInstance = preventedRefresh(newMainWindow());
 
-  app.on("activate", function () {
+  app.on("activate", async () => {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -114,9 +125,13 @@ app.on("ready", () => {
   });
 
   mainWindowInstance.once("ready-to-show", async () => {
-    const questions = await getQuestions(config);
     if (mainWindowInstance) {
-      ipcQuestionList(mainWindowInstance, questions);
+      try {
+        const questions = await getQuestions(config);
+        ipcQuestionList(mainWindowInstance, questions);
+      } catch (err) {
+        ipcErrorAPI(mainWindowInstance, err);
+      }
     }
   });
 });
