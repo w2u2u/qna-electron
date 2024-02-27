@@ -2,10 +2,11 @@ import http from "http";
 import express, { Express, Request, Response } from "express";
 import { QnA } from "./interfaces/qna";
 import { ServeError } from "./interfaces/serverError";
+import qnaData from "./../data/qna.json";
 
 const app: Express = express();
 const PORT: string = process.env.PORT || "3001";
-const qnaList: QnA[] = require("../data/qna.json");
+const qnaList: QnA[] = qnaData;
 
 // Service Uptime / Health Check
 app.get("/", (_: Request, res: Response) => res.sendStatus(200));
